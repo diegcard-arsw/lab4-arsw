@@ -5,10 +5,10 @@
  */
 package edu.eci.arsw.blueprints.persistence.impl;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Repository;
 
@@ -27,7 +27,7 @@ import edu.eci.arsw.blueprints.persistence.BlueprintsPersistence;
 @Repository
 public class InMemoryBlueprintPersistence implements BlueprintsPersistence {
 
-    private final Map<Tuple<String, String>, Blueprint> blueprints = new HashMap<>();
+    private final Map<Tuple<String, String>, Blueprint> blueprints = new ConcurrentHashMap<>();
 
     /**
      * Constructs an instance of InMemoryBlueprintPersistence and loads stub
@@ -37,18 +37,29 @@ public class InMemoryBlueprintPersistence implements BlueprintsPersistence {
      */
     public InMemoryBlueprintPersistence() {
         //load stub data
-        Point[] pts = new Point[]{new Point(140, 140), new Point(115, 115)};
-        Blueprint bp = new Blueprint("_authorname_", "_bpname_ ", pts);
-        blueprints.put(new Tuple<>(bp.getAuthor(), bp.getName()), bp);
+        Point[] pts1 = new Point[]{new Point(140, 140), new Point(115, 115)};
+        Blueprint bp1 = new Blueprint("john", "house_plan", pts1);
+        blueprints.put(new Tuple<>(bp1.getAuthor(), bp1.getName()), bp1);
 
+        Point[] pts2 = new Point[]{new Point(20, 20), new Point(30, 30), new Point(40, 40)};
+        Blueprint bp2 = new Blueprint("john", "office_building", pts2);
+        blueprints.put(new Tuple<>(bp2.getAuthor(), bp2.getName()), bp2);
+
+        Point[] pts3 = new Point[]{new Point(100, 200), new Point(150, 250), new Point(200, 300)};
+        Blueprint bp3 = new Blueprint("maria", "school_design", pts3);
+        blueprints.put(new Tuple<>(bp3.getAuthor(), bp3.getName()), bp3);
+
+        Point[] pts4 = new Point[]{new Point(50, 60), new Point(70, 80), new Point(90, 100), new Point(110, 120)};
+        Blueprint bp4 = new Blueprint("carlos", "park_layout", pts4);
+        blueprints.put(new Tuple<>(bp4.getAuthor(), bp4.getName()), bp4);
     }
 
     /**
      * Saves a blueprint to the in-memory persistence storage.
      * <p>
      * If a blueprint with the same author and name already exists, this method
-     * throws a {@link BlueprintPersistenceException}. Otherwise, it stores the
-     * blueprint using a tuple of author and name as the key.
+     * throws a {@link BlueprintPersistenceException}. This method is thread-safe
+     * and uses atomic operations to prevent race conditions.
      *
      * @param bp the {@link Blueprint} to be saved
      * @throws BlueprintPersistenceException if a blueprint with the same author
@@ -56,10 +67,11 @@ public class InMemoryBlueprintPersistence implements BlueprintsPersistence {
      */
     @Override
     public void saveBlueprint(Blueprint bp) throws BlueprintPersistenceException {
-        if (blueprints.containsKey(new Tuple<>(bp.getAuthor(), bp.getName()))) {
+        Tuple<String, String> key = new Tuple<>(bp.getAuthor(), bp.getName());
+        Blueprint existingBlueprint = blueprints.putIfAbsent(key, bp);
+        
+        if (existingBlueprint != null) {
             throw new BlueprintPersistenceException("The given blueprint already exists: " + bp);
-        } else {
-            blueprints.put(new Tuple<>(bp.getAuthor(), bp.getName()), bp);
         }
     }
 
@@ -85,6 +97,7 @@ public class InMemoryBlueprintPersistence implements BlueprintsPersistence {
     /**
      * Return all blueprints in the store (helper)
      */
+    @Override
     public Set<Blueprint> getAllBlueprints() {
         return new HashSet<>(blueprints.values());
     }

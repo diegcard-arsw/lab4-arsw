@@ -43,4 +43,11 @@ public interface BlueprintsPersistence {
      * specified author
      */
     public Set<Blueprint> getBlueprintByAuthor(String author) throws BlueprintNotFoundException;
+
+    /**
+     * Retrieves all blueprints from the persistence layer.
+     *
+     * @return a set containing all {@link Blueprint} objects in the persistence store
+     */
+    public Set<Blueprint> getAllBlueprints();
 }
